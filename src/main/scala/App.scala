@@ -12,7 +12,6 @@ object App {
     gamefile: String = ""
   )
 
-
   def getWordsFromDirectory(dirName: String) = {
     getWords(new java.io.File(dirName).listFiles)
   }
@@ -64,6 +63,7 @@ object App {
   def useConfig(config: Config) {
     val limit = config.limit
     val lengths = config.lengths
+    val priority = config.priority
     val filename = config.gamefile
 
     val wordList = getWordsFromDirectory("letters")
@@ -87,7 +87,20 @@ object App {
         notUsedYet.filter { word => lengths contains word.length }
       }
 
-      lengthFiltered.take(limit).foreach( word => println(word.length + ": " + word) )
+      val priorityFiltered = if(priority.size == 0) {
+        lengthFiltered
+      } else {
+        lengthFiltered.map({ word =>
+          val wordList = word.toList
+          ((wordList intersect priority).size, word)
+        }).filter(pair => pair._1 > priority.size / 2).sortWith( (left, right) => {
+          (left._1 * 100 + ( 25 - left._2.length ) ) > (right._1 * 100 + ( 25 - right._2.length ) )
+        }).flatten( pair => List(pair._2) )
+      }
+
+      val product = priorityFiltered
+
+      product.take(limit).foreach( word => println(word.length + ": " + word) )
     } catch {
       case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
       case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
