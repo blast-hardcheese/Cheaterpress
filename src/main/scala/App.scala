@@ -5,6 +5,14 @@ object App {
   type LetterMap = List[Tuple2[Char, Int]]
   type WordList = List[String]
 
+  case class Config(
+    limit: Int = 15,
+    lengths: List[Int] = List(), // [7], [7, 8, 9]
+    priority: String = "",
+    gamefile: String = ""
+  )
+
+
   def getWordsFromDirectory(dirName: String) = {
     getWords(new java.io.File(dirName).listFiles)
   }
@@ -53,64 +61,58 @@ object App {
     } ).reverse
   }
 
-  def main(args: Array[String]) {
-    case class Config(foo: Int = 5, bar: String = "bar", xyz: Boolean = false, libname: String = "libname", libfile: String = "libfile", maxlibname: String = "maxlibname", maxcount: Int = 5, whatnot: String = "whatnot")
+  def useConfig(config: Config) {
+    val limit = config.limit
+    val lengths = config.lengths
+    val filename = config.gamefile
 
+    val wordList = getWordsFromDirectory("letters")
+    val wordMap = createGraphFromWords(wordList)
+
+    import java.io.{FileReader, FileNotFoundException, IOException}
+
+    try {
+      val game = io.Source.fromFile(filename).getLines.toList
+      val played = game.tail
+
+      val notUsedYetOption = game.headOption map { rawLetters =>
+        val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
+        sortedWords.filter(word => !(played contains word))
+      }
+
+      val notUsedYet = notUsedYetOption.getOrElse(List())
+      val lengthFiltered = if(lengths.length == 0) {
+        notUsedYet
+      } else {
+        notUsedYet.filter { word => lengths contains word.length }
+      }
+
+      lengthFiltered.take(limit).foreach( word => println(word.length + ": " + word) )
+    } catch {
+      case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
+      case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
+    }
+  }
+
+  def main(args: Array[String]) {
     val parser = new OptionParser[Config]("scopt", "2.x") { def options = Seq(
-      intOpt("f", "foo", "foo is an integer property") { (v: Int, c: Config) => c.copy(foo = v) },
-      opt("o", "output", "output") { (v: String, c: Config) => c.copy(bar = v) },
-      booleanOpt("xyz", "xyz is a boolean property") { (v: Boolean, c: Config) => c.copy(xyz = v) },
-      keyValueOpt("l", "lib", "<libname>", "<filename>", "load library <libname>")
-        { (key: String, value: String, c: Config) => c.copy(libname = key, libfile = value) },
-      keyIntValueOpt(None, "max", "<libname>", "<max>", "maximum count for <libname>")
-        { (key: String, value: Int, c: Config) => c.copy(maxlibname = key, maxcount = value) },
-      arg("<file>", "some argument") { (v: String, c: Config) => c.copy(whatnot = v) }
+      intOpt("l", "limit", "Maximum values to return (Default: 15)") { (v: Int, c: Config) => c.copy(limit = v) },
+
+      opt("r", "length", "Restrict words to specified lengths. Specified as a space-seperated list: \"7\", or \"7 8 9 10\"."){ (v: String, c: Config) =>
+        val lengths = v.split(" ").toList.map(Integer.parseInt)
+        c.copy(lengths = lengths)
+      },
+
+      opt("p", "priority", "Include as many of these letters in the result as possible") { (v: String, c: Config) => c.copy(priority = v) },
+
+      arg("<file>", "Game file to play") { (v: String, c: Config) => c.copy(gamefile = v) }
     ) }
+
     // parser.parse returns Option[C]
     parser.parse(args, Config()) map { config =>
-      println(config)
+      useConfig(config)
     } getOrElse {
       // arguments are bad, usage message will have been displayed
-    }
-
-    if(args.length == 0) {
-      val wordMap = Map(
-        List(('a',2), ('l',1), ('r',1), ('s',1), ('t',1))                   -> List("altars", "astral", "ratals", "talars", "tarsal"),
-        List(('d',1), ('e',1), ('i',1), ('k',1), ('n',1), ('r',1), ('s',1)) -> List("kinders", "kinreds", "redskin"),
-        List(('e',1), ('o',1), ('p',1), ('s',2), ('t',1))                   -> List("estops", "pestos", "posset", "ptoses", "stoeps", "stopes"),
-        List(('e',1), ('h',1), ('l',1), ('o',1), ('s',1))                   -> List("helos", "holes", "hosel", "sheol"),
-        List(('i',1), ('k',1), ('s',1))                                     -> List("kis", "sik", "ski")
-      )
-      val rawLetters = "a"
-      val allLetters = groupLetters(rawLetters)
-      val filteredKeys = wordMap.filterKeys(potentialLetters => {
-        lettersInLetters(potentialLetters, allLetters)
-      })
-    } else {
-      val filename = args(0)
-
-      val wordList = getWordsFromDirectory("letters")
-      val wordMap = createGraphFromWords(wordList)
-
-      import java.io.{FileReader, FileNotFoundException, IOException}
-
-      try {
-        val game = io.Source.fromFile(filename).getLines.toList
-        val played = game.tail
-
-        val notUsedYetOption = game.headOption map { rawLetters =>
-          val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
-          sortedWords.filter(word => !(played contains word))
-        }
-
-        val notUsedYet = notUsedYetOption.getOrElse(List())
-        for(word <- notUsedYet.take(15)) {
-          println(word.length + ": " + word)
-        }
-      } catch {
-        case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
-        case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
-      }
     }
   }
 }
