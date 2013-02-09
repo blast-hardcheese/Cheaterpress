@@ -108,7 +108,7 @@ object App {
   }
 
   def main(args: Array[String]) {
-    val parser = new OptionParser[Config]("scopt", "2.x") { def options = Seq(
+    val parser = new OptionParser[Config]("Cheaterpress", "1.1") { def options = Seq(
       intOpt("l", "limit", "Maximum values to return (Default: 15)") { (v: Int, c: Config) => c.copy(limit = v) },
 
       opt("r", "length", "Restrict words to specified lengths. Specified as a space-seperated list: \"7\", or \"7 8 9 10\"."){ (v: String, c: Config) =>
@@ -121,7 +121,6 @@ object App {
       arg("<file>", "Game file to play") { (v: String, c: Config) => c.copy(gamefile = v) }
     ) }
 
-    // parser.parse returns Option[C]
     parser.parse(args, Config()) map { config =>
       useConfig(config)
     } getOrElse {

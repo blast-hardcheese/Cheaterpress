@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 object MinimalBuild extends Build with ConfigureScalaBuild{
-  lazy val root = scalaMiniProject("se.hardchee","Cheaterpress","1.0").settings(
+  lazy val root = scalaMiniProject("se.hardchee","Cheaterpress","1.1").settings(
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "2.1.0"
     )
