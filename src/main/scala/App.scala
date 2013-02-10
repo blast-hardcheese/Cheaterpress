@@ -9,7 +9,8 @@ object App {
     limit: Int = 15,
     lengths: List[Int] = List(), // [7], [7, 8, 9]
     priority: String = "",
-    gamefile: String = ""
+    gamefile: String = "",
+    wordTree: String = "letters"
   )
 
   def getWordsFromDirectory(dirName: String) = {
@@ -60,47 +61,53 @@ object App {
     } ).reverse
   }
 
-  def useConfig(config: Config) {
+  def playGame(config: Config, lines: List[String], wordMap: WordMapping) {
     val limit = config.limit
     val lengths = config.lengths
     val priority = config.priority
-    val filename = config.gamefile
 
-    val wordList = getWordsFromDirectory("letters")
-    val wordMap = createGraphFromWords(wordList)
+    val played = lines.tail
 
+    val notUsedYetOption = lines.headOption map { rawLetters =>
+      val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
+      sortedWords.filter(word => !(played.map { _.startsWith(word) } contains true) )
+    }
+
+    val notUsedYet = notUsedYetOption.getOrElse(List())
+    val lengthFiltered = if(lengths.length == 0) {
+      notUsedYet
+    } else {
+      notUsedYet.filter { word => lengths contains word.length }
+    }
+
+    val priorityFiltered = if(priority.size == 0) {
+      lengthFiltered
+    } else {
+      lengthFiltered.map({ word =>
+        val wordList = word.toList
+        ((wordList intersect priority).size, word)
+      }).filter(pair => pair._1 > priority.size / 2).sortWith( (left, right) => {
+        (left._1 * 100 + ( 25 - left._2.length ) ) > (right._1 * 100 + ( 25 - right._2.length ) )
+      }).flatten( pair => List(pair._2) )
+    }
+
+    val product = priorityFiltered
+
+    product.take(limit).foreach( word => println(word.length + ": " + word) )
+  }
+
+  def useConfig(config: Config) {
     import java.io.{FileReader, FileNotFoundException, IOException}
 
+    val filename = config.gamefile
+    val wordTree = config.wordTree
+
     try {
-      val game = io.Source.fromFile(filename).getLines.toList
-      val played = game.tail
+      val wordList = getWordsFromDirectory(wordTree)
+      val wordMap = createGraphFromWords(wordList)
 
-      val notUsedYetOption = game.headOption map { rawLetters =>
-        val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
-        sortedWords.filter(word => !(played.map { _.startsWith(word) } contains true) )
-      }
-
-      val notUsedYet = notUsedYetOption.getOrElse(List())
-      val lengthFiltered = if(lengths.length == 0) {
-        notUsedYet
-      } else {
-        notUsedYet.filter { word => lengths contains word.length }
-      }
-
-      val priorityFiltered = if(priority.size == 0) {
-        lengthFiltered
-      } else {
-        lengthFiltered.map({ word =>
-          val wordList = word.toList
-          ((wordList intersect priority).size, word)
-        }).filter(pair => pair._1 > priority.size / 2).sortWith( (left, right) => {
-          (left._1 * 100 + ( 25 - left._2.length ) ) > (right._1 * 100 + ( 25 - right._2.length ) )
-        }).flatten( pair => List(pair._2) )
-      }
-
-      val product = priorityFiltered
-
-      product.take(limit).foreach( word => println(word.length + ": " + word) )
+      val lines = io.Source.fromFile(filename).getLines.toList
+      playGame(config, lines, wordMap)
     } catch {
       case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
       case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
