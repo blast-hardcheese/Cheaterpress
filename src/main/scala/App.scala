@@ -77,7 +77,7 @@ object App {
 
       val notUsedYetOption = game.headOption map { rawLetters =>
         val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
-        sortedWords.filter(word => !(played contains word))
+        sortedWords.filter(word => !(played.map { _.startsWith(word) } contains true) )
       }
 
       val notUsedYet = notUsedYetOption.getOrElse(List())
