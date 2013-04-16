@@ -49,7 +49,7 @@ object App {
   }
 
   def processRawLettersInWordMap(rawLetters: String, wordMap: WordMapping): WordList = {
-
+    // Returns sorted list of all possible words in current game
     val allLetters = groupLetters(rawLetters)
     val filteredKeys = wordMap.filterKeys(potentialLetters => {
       lettersInLetters(potentialLetters, allLetters)
@@ -67,27 +67,29 @@ object App {
 
     val played = lines.tail
 
-    val notUsedYetOption = lines.headOption map { rawLetters =>
+    // Get all playable words (words that are possible in this game, ignore words that have been played (or start with a word that has been played)
+    val notUsedYet: List[String] = lines.headOption.map({ rawLetters =>
       val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
-      sortedWords.filter(word => !(played.map { _.startsWith(word) } contains true) )
-    }
+      sortedWords.filterNot(word => played.map { _.startsWith(word) } contains true ) // Optimize: Replace map with fold
+    }).getOrElse(List())
 
-    val notUsedYet = notUsedYetOption.getOrElse(List())
+    // Filter by length
     val lengthFiltered = if(lengths.length == 0) {
       notUsedYet
     } else {
       notUsedYet.filter { word => lengths contains word.length }
     }
 
+    // Filter by priority letters
     val priorityFiltered = if(priority.size == 0) {
       lengthFiltered
     } else {
       lengthFiltered.map({ word =>
         val wordList = word.toList
-        ((wordList intersect priority).size, word)
+        ((wordList intersect priority).size, word) // (numberOfPriorityLetters, word)
       }).filter(pair => pair._1 > priority.size / 2).sortWith( (left, right) => {
-        (left._1 * 100 + ( 25 - left._2.length ) ) > (right._1 * 100 + ( 25 - right._2.length ) )
-      }).flatten( pair => List(pair._2) )
+        (left._1 * 100 + ( 25 - left._2.length ) ) > (right._1 * 100 + ( 25 - right._2.length ) ) // (intersections * 100 + (25 - wordSize)) <- Prioritize highest intersections, then by fewest characters
+      }).map( pair => pair._2 )
     }
 
     priorityFiltered
