@@ -13,17 +13,17 @@ object App {
     wordTree: String = "letters"
   )
 
-  def getWordsFromDirectory(dirName: String) = {
+  def getWordsFromDirectory(dirName: String): WordList = {
     getWords(new java.io.File(dirName).listFiles)
   }
 
-  def getWords(fileList:Array[java.io.File]) = {
+  def getWords(fileList:Array[java.io.File]): WordList = {
     (fileList.flatMap { f =>
       io.Source.fromFile(f).getLines
     }).toList.sorted
   }
 
-  def groupLetters(word: String) = {
+  def groupLetters(word: String): LetterMap = {
     word.toList.sorted.foldLeft[LetterMap](List(Tuple2(' ', 0)))((a: LetterMap, b: Char) => a.last match {
       case Tuple2(`b`, c) => a.init :+ Tuple2(b, c+1)
       case _ => a :+ Tuple2(b, 1)
@@ -38,7 +38,7 @@ object App {
     })
   }
 
-  def lettersInLetters(small: LetterMap, big:LetterMap) = {
+  def lettersInLetters(small: LetterMap, big:LetterMap): Boolean = {
     val bigMap = big.toMap
 
     val available = small.map { case (char, needed) =>
@@ -48,7 +48,7 @@ object App {
     !(available contains false)
   }
 
-  def processRawLettersInWordMap(rawLetters: String, wordMap: WordMapping) = {
+  def processRawLettersInWordMap(rawLetters: String, wordMap: WordMapping): WordList = {
 
     val allLetters = groupLetters(rawLetters)
     val filteredKeys = wordMap.filterKeys(potentialLetters => {
