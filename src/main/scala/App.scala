@@ -41,11 +41,9 @@ object App {
   def lettersInLetters(small: LetterMap, big:LetterMap): Boolean = {
     val bigMap = big.toMap
 
-    val available = small.map { case (char, needed) =>
-      bigMap.getOrElse(char, 0) >= needed
-    }
-
-    !(available contains false)
+    small.foldLeft[Boolean](true)( (r, next: Tuple2[Char, Int]) => {
+      r && bigMap.getOrElse(next._1, 0) >= next._2
+    })
   }
 
   def processRawLettersInWordMap(rawLetters: String, wordMap: WordMapping): WordList = {
@@ -70,18 +68,18 @@ object App {
     // Get all playable words (words that are possible in this game, ignore words that have been played (or start with a word that has been played)
     val notUsedYet: List[String] = lines.headOption.map({ rawLetters =>
       val sortedWords = processRawLettersInWordMap(rawLetters, wordMap)
-      sortedWords.filterNot(word => played.map { _.startsWith(word) } contains true ) // Optimize: Replace map with fold
+      sortedWords.filterNot(word => played.foldLeft[Boolean](false)( (r, next) => r || next.startsWith(word) ))
     }).getOrElse(List())
 
     // Filter by length
-    val lengthFiltered = if(lengths.length == 0) {
+    val lengthFiltered = if(lengths.isEmpty) {
       notUsedYet
     } else {
       notUsedYet.filter { word => lengths contains word.length }
     }
 
     // Filter by priority letters
-    val priorityFiltered = if(priority.size == 0) {
+    val priorityFiltered = if(priority.isEmpty) {
       lengthFiltered
     } else {
       lengthFiltered.map({ word =>
