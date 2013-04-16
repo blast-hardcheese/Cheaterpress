@@ -61,8 +61,7 @@ object App {
     } ).reverse
   }
 
-  def playGame(config: Config, lines: List[String], wordMap: WordMapping) {
-    val limit = config.limit
+  def playGame(config: Config, lines: List[String], wordMap: WordMapping): List[String] = {
     val lengths = config.lengths
     val priority = config.priority
 
@@ -91,9 +90,24 @@ object App {
       }).flatten( pair => List(pair._2) )
     }
 
-    val product = priorityFiltered
+    priorityFiltered
+  }
 
-    product.take(limit).foreach( word => println(word.length + ": " + word) )
+  def getWords(config: Config, words: List[String]): String = {
+    val limit = config.limit
+    words.take(limit).map( word => word.length + ": " + word ).mkString("\n")
+  }
+
+  def getStats(config: Config, words: List[String]): String = {
+    type WordlengthCountPair = Tuple2[Int, Int]
+
+    words.foldLeft[List[WordlengthCountPair]](List((0, 0)))((last: List[WordlengthCountPair], next: String) => {
+      val length = next.length
+      last.last match {
+        case (`length`, count) => last.init :+ (length, count + 1)
+        case _ => last :+ (length, 1)
+      }
+    }).tail.map( _.toString ).mkString("\n")
   }
 
   def useConfig(config: Config) {
@@ -107,7 +121,8 @@ object App {
       val wordMap = createGraphFromWords(wordList)
 
       val lines = io.Source.fromFile(filename).getLines.toList
-      playGame(config, lines, wordMap)
+      val wordsLeft = playGame(config, lines, wordMap)
+
     } catch {
       case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
       case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
