@@ -101,13 +101,18 @@ object App {
   def getStats(config: Config, words: List[String]): String = {
     type WordlengthCountPair = Tuple2[Int, Int]
 
-    words.foldLeft[List[WordlengthCountPair]](List((0, 0)))((last: List[WordlengthCountPair], next: String) => {
+    val wordsLeft = words.foldLeft[List[WordlengthCountPair]](List((0, 0)))((last: List[WordlengthCountPair], next: String) => {
       val length = next.length
       last.last match {
         case (`length`, count) => last.init :+ (length, count + 1)
         case _ => last :+ (length, 1)
       }
-    }).tail.map( _.toString ).mkString("\n")
+    }).tail
+
+    val wordLeftCount = "Words left: " + wordsLeft.foldLeft[Int](0)((last: Int, next: WordlengthCountPair) => last + next._2).toString + "\n"
+    val wordLeftBreakdown = "(wordSize, numWords):\n" + wordsLeft.map( _.toString ).mkString("\n")
+
+    wordLeftCount + wordLeftBreakdown
   }
 
   def useConfig(config: Config) {
