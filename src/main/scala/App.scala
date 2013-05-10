@@ -6,6 +6,7 @@ object App {
   type WordList = List[String]
 
   case class Config(
+    mode: String = "stats",
     limit: Int = 15,
     lengths: List[Int] = List(), // [7], [7, 8, 9]
     priority: String = "",
@@ -128,6 +129,11 @@ object App {
       val lines = io.Source.fromFile(filename).getLines.toList
       val wordsLeft = playGame(config, lines, wordMap)
 
+      val output = config.mode match {
+        case "stats" => getStats(config, wordsLeft)
+        case "cheat" => getWords(config, wordsLeft)
+      }
+      println(output)
     } catch {
       case ex: FileNotFoundException => println("Unable to access \"" + filename + "\"")
       case ex: IOException => println("Had an IOException trying to read \"" + filename + "\"")
@@ -135,6 +141,23 @@ object App {
   }
 
   def main(args: Array[String]) {
+    val gameModes = List("stats", "cheat")
+    val defaultMode = Config().mode
+    def formatModeOptions = {
+      (gameModes.map {
+        case mode@`defaultMode` => mode + " (default)"
+        case mode => mode
+      }).mkString(", ")
+    }
+    def updateModeOption(v: String, c: Config) = {
+        val newMode = v.toLowerCase
+        if(gameModes contains newMode)
+          c.copy(mode = newMode)
+        else {
+          println("Bad mode '%s', falling back to '%s'.".format(newMode, defaultMode))
+          c
+        }
+    }
     val parser = new OptionParser[Config]("Cheaterpress", "1.1") { def options = Seq(
       intOpt("l", "limit", "Maximum values to return (Default: 15)") { (v: Int, c: Config) => c.copy(limit = v) },
 
@@ -144,6 +167,8 @@ object App {
       },
 
       opt("p", "priority", "Include as many of these letters in the result as possible") { (v: String, c: Config) => c.copy(priority = v) },
+
+      opt("m", "mode", "Options are: " + formatModeOptions) { (v: String, c: Config) => updateModeOption(v, c) },
 
       arg("<file>", "Game file to play") { (v: String, c: Config) => c.copy(gamefile = v) }
     ) }
